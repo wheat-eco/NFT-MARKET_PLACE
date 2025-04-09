@@ -104,12 +104,13 @@ module nft::admin_nft {
 
         event::emit(NFTMinted {
             object_id: object::id(&nft),
-            collection_id: object::id(&collection.id), // Convert UID to ID
+            collection_id: object::id(collection), // Use the collection directly
             minter: ctx.sender(),
         });
 
-        // Use custom transfer function
-        transfer_nft(nft, ctx.sender());
+        // Return the NFT before transferring it
+        let nft_to_transfer = nft;
+        transfer_nft(nft_to_transfer, ctx.sender());
 
         nft
     }
