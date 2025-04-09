@@ -79,36 +79,40 @@ module nft::admin_nft {
     /// ===== User Functions =====
 
     /// Custom transfer function for NFTs
+    public fun transfer_nft(nft: NFT, recipient: address) {
+        transfer::transfer(nft, recipient);
+    }
+
     /// Mint an NFT from a collection
-public fun mint_nft(
-    collection: &mut NFTCollection,
-    name: vector<u8>,
-    description: vector<u8>,
-    url: vector<u8>,
-    ctx: &mut TxContext,
-): NFT {
-    assert!(collection.minted < collection.total_supply, E_SUPPLY_EXHAUSTED);
+    public fun mint_nft(
+        collection: &mut NFTCollection,
+        name: vector<u8>,
+        description: vector<u8>,
+        url: vector<u8>,
+        ctx: &mut TxContext,
+    ): NFT {
+        assert!(collection.minted < collection.total_supply, E_SUPPLY_EXHAUSTED);
 
-    let nft = NFT {
-        id: object::new(ctx),
-        name: string::utf8(name),
-        description: string::utf8(description),
-        url: url::new_unsafe_from_bytes(url),
-    };
+        let nft = NFT {
+            id: object::new(ctx),
+            name: string::utf8(name),
+            description: string::utf8(description),
+            url: url::new_unsafe_from_bytes(url),
+        };
 
-    collection.minted = collection.minted + 1;
+        collection.minted = collection.minted + 1;
 
-    event::emit(NFTMinted {
-        object_id: object::id(&nft),
-        collection_id: collection.id, // Use the `id` field directly
-        minter: ctx.sender(),
-    });
+        event::emit(NFTMinted {
+            object_id: object::id(&nft),
+            collection_id: object::id(&collection.id), // Convert UID to ID
+            minter: ctx.sender(),
+        });
 
-    // Use custom transfer function
-    transfer_nft(nft, ctx.sender());
+        // Use custom transfer function
+        transfer_nft(nft, ctx.sender());
 
-    nft
-}
+        nft
+    }
 
     /// Get metadata of an NFT
     public fun get_metadata(nft: &NFT): (&string::String, &string::String, &Url) {
