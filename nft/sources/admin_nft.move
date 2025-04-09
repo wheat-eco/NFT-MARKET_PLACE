@@ -108,11 +108,14 @@ module nft::admin_nft {
             minter: ctx.sender(),
         });
 
-        // Return the NFT before transferring it
-        let nft_to_transfer = nft;
-        transfer_nft(nft_to_transfer, ctx.sender());
+        // Assign the NFT to a new variable for returning
+        let nft_returned = nft;
 
-        nft
+        // Transfer the NFT
+        transfer_nft(nft_returned, ctx.sender());
+
+        // Return the NFT
+        nft_returned
     }
 
     /// Get metadata of an NFT
