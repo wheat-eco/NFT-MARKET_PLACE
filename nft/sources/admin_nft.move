@@ -15,14 +15,15 @@ module nft::admin_nft {
         url: Url,
     }
 
-    /// Represents an NFT Collection
+    /// Represents an NFT Collection (or Master Copy)
     public struct NFTCollection has key, store {
         id: UID,
         name: string::String,
         description: string::String,
-        total_supply: u64,
-        minted: u64,
-        price: u64, // Price in SUI
+        total_supply: u64, // Total number of copies allowed
+        minted: u64,       // Number of copies minted so far
+        price: u64,        // Price per copy (in SUI)
+        url: Url,          // Media link for the NFT
     }
 
     /// Event emitted when an NFT is minted
@@ -41,12 +42,13 @@ module nft::admin_nft {
 
     /// ===== Admin Functions =====
 
-    /// Create a new NFT collection
+    /// Create a new NFT collection (or Master Copy)
     public fun create_collection(
         name: vector<u8>,
         description: vector<u8>,
         total_supply: u64,
         price: u64,
+        url: vector<u8>, // Media link for the NFT
         ctx: &mut TxContext,
     ): NFTCollection {
         assert!(ctx.sender() == ADMIN, E_NOT_ADMIN);
@@ -58,6 +60,7 @@ module nft::admin_nft {
             total_supply,
             minted: 0,
             price,
+            url: url::new_unsafe_from_bytes(url), // Store the media link
         };
 
         // Return the collection
@@ -67,7 +70,7 @@ module nft::admin_nft {
     /// Delete an NFT collection
     public fun delete_collection(collection: NFTCollection, ctx: &mut TxContext) {
         assert!(ctx.sender() == ADMIN, E_NOT_ADMIN);
-        let NFTCollection { id, name: _, description: _, total_supply: _, minted: _, price: _ } = collection;
+        let NFTCollection { id, name: _, description: _, total_supply: _, minted: _, price: _, url: _ } = collection;
         id.delete();
     }
 
@@ -79,26 +82,18 @@ module nft::admin_nft {
 
     /// ===== User Functions =====
 
-    /// Custom transfer function for NFTs
-    public fun transfer_nft(nft: NFT, recipient: address) {
-        transfer::transfer(nft, recipient);
-    }
-
-    /// Mint an NFT from a collection
+    /// Mint a copy of the NFT from the collection
     public fun mint_nft(
         collection: &mut NFTCollection,
-        name: vector<u8>,
-        description: vector<u8>,
-        url: vector<u8>,
         ctx: &mut TxContext,
     ): NFT {
         assert!(collection.minted < collection.total_supply, E_SUPPLY_EXHAUSTED);
 
         let nft = NFT {
-            id: object::new(ctx),
-            name: string::utf8(name),
-            description: string::utf8(description),
-            url: url::new_unsafe_from_bytes(url),
+            id: object::new(ctx), // Unique identifier for this copy
+            name: collection.name, // Use the name directly
+            description: collection.description, // Use the description directly
+            url: collection.url, // Use the URL directly
         };
 
         collection.minted = collection.minted + 1;
@@ -111,6 +106,11 @@ module nft::admin_nft {
 
         // Return the NFT
         nft
+    }
+
+    /// Custom transfer function for NFTs
+    public fun transfer_nft(nft: NFT, recipient: address) {
+        transfer::transfer(nft, recipient);
     }
 
     /// Transfer an NFT after minting
@@ -143,22 +143,20 @@ module nft::admin_nft {
         description: vector<u8>,
         total_supply: u64,
         price: u64,
+        url: vector<u8>, // Media link for the NFT
         ctx: &mut TxContext
     ) {
-        let collection = create_collection(name, description, total_supply, price, ctx);
+        let collection = create_collection(name, description, total_supply, price, url, ctx);
         transfer::transfer(collection, tx_context::sender(ctx));
     }
 
     /// Entry function to mint an NFT and transfer it to a recipient
     public entry fun mint_nft_and_transfer(
         collection: &mut NFTCollection,
-        name: vector<u8>,
-        description: vector<u8>,
-        url: vector<u8>,
         recipient: address,
         ctx: &mut TxContext
     ) {
-        let nft = mint_nft(collection, name, description, url, ctx);
+        let nft = mint_nft(collection, ctx);
         transfer_nft(nft, recipient);
     }
 }
