@@ -37,7 +37,7 @@ module nft::admin_nft {
     const E_SUPPLY_EXHAUSTED: u64 = 2;
 
     /// Admin address (hardcoded for simplicity)
-    const ADMIN: address = @0x1;
+    const ADMIN: address = @0xe44e81950499d6e8b149c2237340bf1048f9646c008379736802fd86db4fb120;
 
     /// ===== Admin Functions =====
 
@@ -60,6 +60,7 @@ module nft::admin_nft {
             price,
         };
 
+        // Return the collection
         collection
     }
 
@@ -132,5 +133,32 @@ module nft::admin_nft {
     /// Get the price of NFTs in a collection
     public fun get_price(collection: &NFTCollection): u64 {
         collection.price
+    }
+
+    /// ===== Entry Functions =====
+
+    /// Entry function to create an NFT collection and transfer it to the sender
+    public entry fun create_collection_and_transfer(
+        name: vector<u8>,
+        description: vector<u8>,
+        total_supply: u64,
+        price: u64,
+        ctx: &mut TxContext
+    ) {
+        let collection = create_collection(name, description, total_supply, price, ctx);
+        transfer::transfer(collection, tx_context::sender(ctx));
+    }
+
+    /// Entry function to mint an NFT and transfer it to a recipient
+    public entry fun mint_nft_and_transfer(
+        collection: &mut NFTCollection,
+        name: vector<u8>,
+        description: vector<u8>,
+        url: vector<u8>,
+        recipient: address,
+        ctx: &mut TxContext
+    ) {
+        let nft = mint_nft(collection, name, description, url, ctx);
+        transfer_nft(nft, recipient);
     }
 }
